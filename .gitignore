@@ -1,0 +1,12 @@
+# trained model
+checkpoint/
+*.pth
+
+log/
+logs/
+
+
+
+*__pycache__/
+
+

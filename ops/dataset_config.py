@@ -5,7 +5,7 @@
 
 import os
 
-ROOT_DATASET = '/ssd/video/'  # '/data/jilin/'
+ROOT_DATASET = '/rscratch/zhendong/video-acc/TSM/'  # '/data/jilin/'
 
 
 def return_ucf101(modality):
