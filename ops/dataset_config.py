@@ -5,8 +5,9 @@
 
 import os
 
-ROOT_DATASET = '/rscratch/zhendong/video-acc/TSM/'  # '/data/jilin/'
-
+# use relative path
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+ROOT_DATASET = os.path.dirname(DIR_PATH) + '/'
 
 def return_ucf101(modality):
     filename_categories = 'UCF101/labels/classInd.txt'
