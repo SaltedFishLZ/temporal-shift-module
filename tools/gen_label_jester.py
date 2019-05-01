@@ -4,23 +4,19 @@
 # {jilin, songhan}@mit.edu, ganchuang@csail.mit.edu
 # ------------------------------------------------------
 # Code adapted from https://github.com/metalbubble/TRN-pytorch/blob/master/process_dataset.py
-# processing the raw data of the video Something-Something-V2
+# processing the raw data of the video Something-Something-V1
 
 import os
-import json
-from collections import OrderedDict
-
 
 if __name__ == '__main__':
-    dataset_name = 'something-something-v2'  # 'jester-v1'
-    with open('%s-labels.json' % dataset_name) as f:
-        data = json.load(f, object_pairs_hook=OrderedDict)
+    dataset_name = 'jester-v1'
+    with open('%s-labels.csv' % dataset_name) as f:
+        lines = f.readlines()
     categories = []
-    for i, (cat, idx) in enumerate(data.items()):
-        print("i = {}; idx = {}".format(i, idx))
-        assert i == int(idx)  # make sure the rank is right
-        categories.append(cat)
-
+    for line in lines:
+        line = line.rstrip()
+        categories.append(line)
+    categories = sorted(categories)
     with open('category.txt', 'w') as f:
         f.write('\n'.join(categories))
 
@@ -28,25 +24,28 @@ if __name__ == '__main__':
     for i, category in enumerate(categories):
         dict_categories[category] = i
 
-    files_input = ['%s-validation.json' % dataset_name, '%s-train.json' % dataset_name, '%s-test.json' % dataset_name]
-    files_output = ['val_videofolder.txt', 'train_videofolder.txt', 'test_videofolder.txt']
+    files_input = ['%s-validation.csv' % dataset_name, '%s-train.csv' % dataset_name]
+    files_output = ['val_videofolder.txt', 'train_videofolder.txt']
     for (filename_input, filename_output) in zip(files_input, files_output):
         with open(filename_input) as f:
-            data = json.load(f)
+            lines = f.readlines()
         folders = []
         idx_categories = []
-        for item in data:
-            folders.append(item['id'])
-            if 'test' not in filename_input:
-                idx_categories.append(dict_categories[item['template'].replace('[', '').replace(']', '')])
-            else:
-                idx_categories.append(0)
+        for line in lines:
+            line = line.rstrip()
+            items = line.split(';')
+            folders.append(items[0])
+            idx_categories.append(dict_categories[items[1]])
         output = []
+
+        # print(folders)
+
         for i in range(len(folders)):
             curFolder = folders[i]
             curIDX = idx_categories[i]
+            # print(curFolder)
             # counting the number of frames in each video folders
-            dir_files = os.listdir(os.path.join('20bn-something-something-v2-frames', curFolder))
+            dir_files = os.listdir(os.path.join('20bn-jester-v1', curFolder))
             output.append('%s %d %d' % (curFolder, len(dir_files), curIDX))
             print('%d/%d' % (i, len(folders)))
         with open(filename_output, 'w') as f:

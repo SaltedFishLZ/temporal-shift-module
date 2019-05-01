@@ -2,9 +2,10 @@
 checkpoint/
 *.pth
 
+# logs
 log/
 logs/
-
+*.log
 
 
 *__pycache__/
