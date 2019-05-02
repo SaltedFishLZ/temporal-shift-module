@@ -329,11 +329,8 @@ data_loader = torch.utils.data.DataLoader(
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True,
 )
-if args.gpus is not None:
-    devices = [args.gpus[i] for i in range(args.workers)]
-else:
-    devices = list(range(args.workers))
-net = torch.nn.DataParallel(net.cuda())
+
+net = torch.nn.DataParallel(net, device_ids=args.gpus).cuda()
 net.eval()
 
 # ---------------------------------------------
@@ -392,3 +389,14 @@ for chance in range(100):
 
 
 # dump results
+weight_name = this_weights.split('/')[-1]
+
+fname = weight_name.split('.')[0] + ".idacc"
+f = open(fname, "wb")
+pickle.dump(mcacc_meter.id_accuracies)
+f.close()
+
+fname = weight_name.split('.')[0] + ".mcacc"
+f = open(fname, "wb")
+pickle.dump(mcacc_meter.mc_accuracies)
+f.close()
