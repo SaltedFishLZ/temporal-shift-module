@@ -91,7 +91,7 @@ def aggregate_corrects(correct, maxk=1):
 def hits_to_acc(hits):
     '''
     - hits : [K][Sample]
-    - return : [K]
+    - return : list[K]
     '''
     res = []
     for hit_k in hits:
@@ -126,19 +126,22 @@ class accuracy_multichance(object):
         self.inited = False
         self.topk = copy.deepcopy(topk)
         self.maxk = max(topk)
-        # historical corrects
-        # [Chance][Sample]
-        self.all_corrects = []
+        # historical corrects for independent predictions
+        # list[Chance] -> ndarray[Sample]
+        self.id_corrects = []
+        # historical corrects for mc predictions
+        self.mc_corrects = []
+        # historical accuracy for independent predictions
+        # list[Chance] -> ndarray[K]
+        self.id_accuracies = []
+        # historical accuracy for multi-chance prediction
+        self.mc_accuracies = []
+
 
     def get_targets(self, target):
         # targets is a list of all samples
         # [Sample]
         self.target = copy.deepcopy(target)
-        # running corrects
-        # [Sample]
-        self.running_correct = np.zeros(
-                (self.maxk, len(target))
-            ).astype(int)
         self.inited = True
 
     def __call__(self, output):
@@ -150,27 +153,32 @@ class accuracy_multichance(object):
         # temporary correct arrary for this 1 evaluation
         _, pred = output.topk(self.maxk, 1, True, True)
         pred = pred.t()
-        correct = pred.eq(self.target.view(1, -1).expand_as(pred))
-        correct = correct.numpy()  
+        id_correct = pred.eq(self.target.view(1, -1).expand_as(pred))
+        id_correct = id_correct.numpy()  
 
         # log data
-        self.all_corrects.append(correct)
+        self.id_corrects.append(id_correct)
 
-        # or
-        self.running_correct = np.logical_or(self.running_correct, correct)
+        # logical or
+        if (len(self.mc_corrects) > 0):
+            mc_correct = np.logical_or(
+                self.mc_corrects[-1], id_correct)
+        else:
+            mc_correct = id_correct
+        self.mc_corrects.append(mc_correct)
 
-        hits = aggregate_corrects(correct, self.maxk)
-        running_hits = aggregate_corrects(self.running_correct, self.maxk)
+        id_hits = aggregate_corrects(id_correct, self.maxk)
+        mc_hits = aggregate_corrects(mc_correct, self.maxk)
 
-        accs = hits_to_acc(hits)
-        running_accs = hits_to_acc(running_hits)
-        
-        print("Current Acc : {}".format(accs))
-        print("Running Acc : {}".format(running_accs))
+        id_accs = hits_to_acc(id_hits)
+        mc_accs = hits_to_acc(mc_hits)
+
+        self.id_accuracies.append(id_accs)
+        self.mc_accuracies.append(mc_accs)
 
         res = []
         for k in self.topk:
-            res.append(running_accs[k-1])
+            res.append(mc_accs[k-1])
         return(res)
 
 
@@ -341,6 +349,7 @@ predics_of_allsamples = np.zeros((0, num_class))
 mcacc_meter = accuracy_multichance(topk=(1,5))
 
 for chance in range(100):
+    print("Chance [{}]".format(chance))
     
     targets_of_allsamples = np.zeros((0))
     predics_of_allsamples = np.zeros((0, num_class))
@@ -365,7 +374,7 @@ for chance in range(100):
     if (__ddebug__):
         predicts_list = predics_of_allsamples.tolist()
         fname = "chance-{}.pred".format(chance)
-        f = open(file, "w")
+        f = open(fname, "w")
         for r in predicts_list:
             f.write(str(r))
         f.close()
@@ -375,8 +384,11 @@ for chance in range(100):
         mcacc_meter.get_targets(targets_of_allsamples)
 
     running_accurary = (mcacc_meter(predics_of_allsamples))
-    print("Chance [{}]".format(chance))
-    print(running_accurary)
+        
+    print("ID Acc : {}".format(mcacc_meter.id_accuracies[-1]))
+    print("MC Acc : {}".format(mcacc_meter.mc_accuracies[-1]))
 
 
 
+
+# dump results
