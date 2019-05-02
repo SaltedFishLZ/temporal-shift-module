@@ -10,6 +10,7 @@ import os
 import numpy as np
 from numpy.random import randint
 
+__ddebug__ = True
 
 class VideoRecord(object):
     def __init__(self, row):
@@ -28,12 +29,27 @@ class VideoRecord(object):
         return int(self._data[2])
 
 
+def gen_rand_seq(seg_num=3, interval=(0, 12)):
+    '''
+    interval : [low, high)
+    '''
+    res = []
+    while (len(res) < seg_num):
+        _r = randint(interval[0], interval[1])
+        if (_r not in res):
+            res.append(_r)
+    res.sort()
+    return(res)
+
+
 class TSNDataSet(data.Dataset):
     def __init__(self, root_path, list_file,
                  num_segments=3, new_length=1, modality='RGB',
                  image_tmpl='img_{:05d}.jpg', transform=None,
                  random_shift=True, test_mode=False,
-                 remove_missing=False, dense_sample=False):
+                 remove_missing=False, dense_sample=False, 
+                 random_sample = False
+                 ):
 
         self.root_path = root_path
         self.list_file = list_file
@@ -46,8 +62,11 @@ class TSNDataSet(data.Dataset):
         self.test_mode = test_mode
         self.remove_missing = remove_missing
         self.dense_sample = dense_sample  # using dense sample as I3D
+        self.random_sample = random_sample # using true random sample
         if self.dense_sample:
             print('=> Using dense sample for the dataset...')
+        if (self.random_sample):
+            print('=> Using random sample for the dataset...')
 
         if self.modality == 'RGBDiff':
             self.new_length += 1  # Diff needs one more image to calculate diff
@@ -112,7 +131,13 @@ class TSNDataSet(data.Dataset):
             start_idx = 0 if sample_pos == 1 else np.random.randint(0, sample_pos - 1)
             offsets = [(idx * t_stride + start_idx) % record.num_frames for idx in range(self.num_segments)]
             return np.array(offsets) + 1
-        else:  # normal sample
+        elif (self.random_sample):
+            # img index starts from 1 !!!
+            offsets = gen_rand_seq(self.num_segments, (1 , record.num_frames + 1))
+            if (__ddebug__):
+                print("Record ", record)
+                print("Frames ", offsets)
+            return(offsets)         else:  # normal sample
             average_duration = (record.num_frames - self.new_length + 1) // self.num_segments
             if average_duration > 0:
                 offsets = np.multiply(list(range(self.num_segments)), average_duration) + randint(average_duration,
@@ -130,6 +155,13 @@ class TSNDataSet(data.Dataset):
             start_idx = 0 if sample_pos == 1 else np.random.randint(0, sample_pos - 1)
             offsets = [(idx * t_stride + start_idx) % record.num_frames for idx in range(self.num_segments)]
             return np.array(offsets) + 1
+        elif (self.random_sample):
+            # img index starts from 1 !!!
+            offsets = gen_rand_seq(self.num_segments, (1 , record.num_frames + 1))
+            if (__ddebug__):
+                print("Record ", record)
+                print("Frames ", offsets)
+            return(offsets)      
         else:
             if record.num_frames > self.num_segments + self.new_length - 1:
                 tick = (record.num_frames - self.new_length + 1) / float(self.num_segments)
@@ -147,7 +179,13 @@ class TSNDataSet(data.Dataset):
             for start_idx in start_list.tolist():
                 offsets += [(idx * t_stride + start_idx) % record.num_frames for idx in range(self.num_segments)]
             return np.array(offsets) + 1
-        else:
+        elif (self.random_sample):
+            # img index starts from 1 !!!
+            offsets = gen_rand_seq(self.num_segments, (1 , record.num_frames + 1))
+            if (__ddebug__):
+                print("Record ", record)
+                print("Frames ", offsets)
+            return(offsets)         else:
             tick = (record.num_frames - self.new_length + 1) / float(self.num_segments)
             offsets = np.array([int(tick / 2.0 + tick * x) for x in range(self.num_segments)])
             return offsets + 1
