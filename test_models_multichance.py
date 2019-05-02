@@ -8,6 +8,7 @@
 import argparse
 import time
 import copy
+import pickle
 
 import numpy as np
 import torch.nn.parallel
@@ -18,6 +19,8 @@ from ops.models import TSN
 from ops.transforms import *
 from ops import dataset_config
 from torch.nn import functional as F
+
+__ddebug__ = False
 
 # options
 parser = argparse.ArgumentParser(description="TSM testing on the full validation set")
@@ -119,21 +122,24 @@ def accuracy(output, target, topk=(1,)):
 
 class accuracy_multichance(object):
     
-    def __init__(self, target, topk=(1,)):
+    def __init__(self, topk=(1,)):
+        self.inited = False
+        self.topk = copy.deepcopy(topk)
+        self.maxk = max(topk)
+        # historical corrects
+        # [Chance][Sample]
+        self.all_corrects = []
+
+    def get_targets(self, target):
         # targets is a list of all samples
         # [Sample]
         self.target = copy.deepcopy(target)
-        self.topk = copy.deepcopy(topk)
-        self.maxk = max(topk)
         # running corrects
         # [Sample]
         self.running_correct = np.zeros(
                 (self.maxk, len(target))
             ).astype(int)
-        # historical corrects
-        # [Chance][Sample]
-        self.all_corrects = []
-
+        self.inited = True
 
     def __call__(self, output):
         '''
@@ -332,26 +338,45 @@ targets_of_allsamples = np.zeros((0))
 predics_of_allsamples = np.zeros((0, num_class))
 
 
+mcacc_meter = accuracy_multichance(topk=(1,5))
+
+for chance in range(100):
+    
+    targets_of_allsamples = np.zeros((0))
+    predics_of_allsamples = np.zeros((0, num_class))
+    
+    i = 0
+    for data_label_pairs in data_loader:
+        with torch.no_grad():
+            data, label = data_label_pairs
+            rst = eval_video((i, data, label), net, this_test_segments, modality)
+            predict = rst[1]
+
+            predics_of_allsamples = np.append(predics_of_allsamples, predict, axis=0)
+            targets_of_allsamples = np.append(targets_of_allsamples, label, axis=0)
+
+            # if (i % 20 == 0):
+            #     print("[{}]: Prediction Blob Shape ".format(i), predics_of_allsamples.shape)
+            i += 1
+
+    targets_of_allsamples = (torch.Tensor(targets_of_allsamples)).long()
+    predics_of_allsamples = torch.Tensor(predics_of_allsamples)
+
+    if (__ddebug__):
+        predicts_list = predics_of_allsamples.tolist()
+        fname = "chance-{}.pred".format(chance)
+        f = open(file, "w")
+        for r in predicts_list:
+            f.write(str(r))
+        f.close()
 
 
-for i, data_label_pairs in data_loader:
-    with torch.no_grad():
-        print("i = ", i)
-        data, label = data_label_pairs
-        rst = eval_video((i, data, label), net, this_test_segments, modality)
-        predict = rst[1]
+    if (False == mcacc_meter.inited):
+        mcacc_meter.get_targets(targets_of_allsamples)
 
-        predics_of_allsamples = np.append(predics_of_allsamples, predict.numpy(), axis=0)
-        targets_of_allsamples = np.append(targets_of_allsamples, label.numpy(), axis=0)
-            
-        if (i % 20 == 0):
-            print("[{}]: Prediction Blob Shape ".format(i), predics_of_allsamples.shape)
+    running_accurary = (mcacc_meter(predics_of_allsamples))
+    print("Chance [{}]".format(chance))
+    print(running_accurary)
 
-targets_of_allsamples = (torch.Tensor(targets_of_allsamples)).long()
-predics_of_allsamples = torch.Tensor(predics_of_allsamples)
 
-mcacc_meter = accuracy_multichance(target=targets_of_allsamples, topk=(1,5))
-running_accurary = (mcacc_meter(predics_of_allsamples))
-print("Chance [0]")
-print(running_accurary)
 

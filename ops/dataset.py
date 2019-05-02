@@ -7,10 +7,12 @@ import torch.utils.data as data
 
 from PIL import Image
 import os
-import numpy as np
-from numpy.random import randint
+import time
 
-__ddebug__ = True
+import numpy as np
+from numpy.random import randint, seed
+
+__ddebug__ = False
 
 class VideoRecord(object):
     def __init__(self, row):
@@ -28,11 +30,15 @@ class VideoRecord(object):
     def label(self):
         return int(self._data[2])
 
+    def __repr__(self):
+        return("VideoRecord " + str(self.path))
+
 
 def gen_rand_seq(seg_num=3, interval=(0, 12)):
     '''
     interval : [low, high)
     '''
+    seed(int(time.time()))
     res = []
     while (len(res) < seg_num):
         _r = randint(interval[0], interval[1])
@@ -125,6 +131,8 @@ class TSNDataSet(data.Dataset):
         :param record: VideoRecord
         :return: list
         """
+        seed(int(time.time()))
+
         if self.dense_sample:  # i3d dense sample
             sample_pos = max(1, 1 + record.num_frames - 64)
             t_stride = 64 // self.num_segments
@@ -137,7 +145,8 @@ class TSNDataSet(data.Dataset):
             if (__ddebug__):
                 print("Record ", record)
                 print("Frames ", offsets)
-            return(offsets)         else:  # normal sample
+            return(offsets)
+        else:  # normal sample
             average_duration = (record.num_frames - self.new_length + 1) // self.num_segments
             if average_duration > 0:
                 offsets = np.multiply(list(range(self.num_segments)), average_duration) + randint(average_duration,
@@ -149,6 +158,8 @@ class TSNDataSet(data.Dataset):
             return offsets + 1
 
     def _get_val_indices(self, record):
+        seed(int(time.time()))
+
         if self.dense_sample:  # i3d dense sample
             sample_pos = max(1, 1 + record.num_frames - 64)
             t_stride = 64 // self.num_segments
@@ -171,6 +182,8 @@ class TSNDataSet(data.Dataset):
             return offsets + 1
 
     def _get_test_indices(self, record):
+        seed(int(time.time()))
+
         if self.dense_sample:
             sample_pos = max(1, 1 + record.num_frames - 64)
             t_stride = 64 // self.num_segments
@@ -185,12 +198,15 @@ class TSNDataSet(data.Dataset):
             if (__ddebug__):
                 print("Record ", record)
                 print("Frames ", offsets)
-            return(offsets)         else:
+            return(offsets)
+        else:
             tick = (record.num_frames - self.new_length + 1) / float(self.num_segments)
             offsets = np.array([int(tick / 2.0 + tick * x) for x in range(self.num_segments)])
             return offsets + 1
 
     def __getitem__(self, index):
+        seed(int(time.time()))
+
         record = self.video_list[index]
         # check this is a legit video folder
 
