@@ -345,7 +345,11 @@ predics_of_allsamples = np.zeros((0, num_class))
 
 mcacc_meter = accuracy_multichance(topk=(1,5))
 
-for chance in range(2):
+
+
+CHANCES = 20
+
+for chance in range(CHANCES):
     print("Chance [{}]".format(chance))
     
     targets_of_allsamples = np.zeros((0))
