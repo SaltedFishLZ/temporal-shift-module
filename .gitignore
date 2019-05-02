@@ -3,6 +3,10 @@ checkpoint/
 *.pth
 *.pth.tar
 
+# pickle file
+*.pkl
+
+
 # logs
 log/
 logs/

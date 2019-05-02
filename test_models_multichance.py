@@ -345,7 +345,7 @@ predics_of_allsamples = np.zeros((0, num_class))
 
 mcacc_meter = accuracy_multichance(topk=(1,5))
 
-for chance in range(100):
+for chance in range(2):
     print("Chance [{}]".format(chance))
     
     targets_of_allsamples = np.zeros((0))
@@ -393,10 +393,10 @@ weight_name = this_weights.split('/')[-1]
 
 fname = weight_name.split('.')[0] + ".idacc"
 f = open(fname, "wb")
-pickle.dump(mcacc_meter.id_accuracies)
+pickle.dump(mcacc_meter.id_accuracies, f)
 f.close()
 
 fname = weight_name.split('.')[0] + ".mcacc"
 f = open(fname, "wb")
-pickle.dump(mcacc_meter.mc_accuracies)
+pickle.dump(mcacc_meter.mc_accuracies, f)
 f.close()
