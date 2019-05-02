@@ -1,13 +1,15 @@
 # trained model
 checkpoint/
 *.pth
+*.pth.tar
 
 # logs
 log/
 logs/
 *.log
-
+*.stdout
+*.stderr
 
 *__pycache__/
-
+*.npy
 
