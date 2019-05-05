@@ -5,10 +5,11 @@
 
 import os
 import threading
+import multiprocessing as mp
 
-NUM_THREADS = 100
-VIDEO_ROOT = '/rscratch/data/Sth-sth/Sth-sth-v2-raw'         # Downloaded webm videos
-FRAME_ROOT = '/rscratch/zhendong/video-acc/TSM/sth-sth-v2-img'  # Directory for extracted frames
+NUM_THREADS = 16
+VIDEO_ROOT = '~/Datasets/Sth-sth/Sth-sth-v2-raw'         # Downloaded webm videos
+FRAME_ROOT = '~/Datasets/Sth-sth/Sth-sth-v2-TSM-sliced'  # Directory for extracted frames
 
 
 def split(l, n):
@@ -31,6 +32,40 @@ def target(video_list):
         extract(video)
 
 
+def extract_video(worker_id, task_queue):
+    worker_id_str = "{0:05d}".format(worker_id)
+    while True:
+        task = task_queue.get()
+        if ("DONE" == task):
+            break
+        # main job
+        video = task
+        os.makedirs(os.path.join(FRAME_ROOT, video[:-5]))
+        extract(video)        
+    
+
+
+# multi-process wrapper
+def extract_videos(video_list, num_proc):
+    task_queue = mp.Queue()
+    # init process
+    process_list = []
+    for _i in range(num_proc):
+        p = mp.Process(target=extract_video, \
+            args=(int(_i), task_queue))
+        p.start()
+        process_list.append(p)
+    # init tasks
+    tasks = video_list
+    for _task in tasks:
+        task_queue.put(_task)
+    for i in range(num_proc):
+        task_queue.put("DONE")
+    # waiting for join
+    for p in process_list:
+        p.join()
+
+
 if __name__ == '__main__':
     if not os.path.exists(VIDEO_ROOT):
         raise ValueError('Please download videos and set VIDEO_ROOT variable.')
@@ -38,13 +73,16 @@ if __name__ == '__main__':
         os.makedirs(FRAME_ROOT)
 
     video_list = os.listdir(VIDEO_ROOT)
-    splits = list(split(video_list, NUM_THREADS))
+    
+    # splits = list(split(video_list, NUM_THREADS))
 
-    threads = []
-    for i, split in enumerate(splits):
-        thread = threading.Thread(target=target, args=(split,))
-        thread.start()
-        threads.append(thread)
+    # threads = []
+    # for i, split in enumerate(splits):
+    #     thread = threading.Thread(target=target, args=(split,))
+    #     thread.start()
+    #     threads.append(thread)
 
-    for thread in threads:
-        thread.join()
+    # for thread in threads:
+    #     thread.join()
+
+    extract_videos(video_list, NUM_THREADS)
