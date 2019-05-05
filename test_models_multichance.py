@@ -347,7 +347,7 @@ mcacc_meter = accuracy_multichance(topk=(1,5))
 
 
 
-CHANCES = 20
+CHANCES = 100
 
 for chance in range(CHANCES):
     print("Chance [{}]".format(chance))
