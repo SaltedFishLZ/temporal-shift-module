@@ -8,8 +8,9 @@ import threading
 import multiprocessing as mp
 
 NUM_THREADS = 16
-VIDEO_ROOT = '~/Datasets/Sth-sth/Sth-sth-v2-raw'         # Downloaded webm videos
-FRAME_ROOT = '~/Datasets/Sth-sth/Sth-sth-v2-TSM-sliced'  # Directory for extracted frames
+USER_HOME = os.path.expanduser('~')
+VIDEO_ROOT = os.path.join(USER_HOME, 'Datasets/Sth-sth/Sth-sth-v2-raw')         # Downloaded webm videos
+FRAME_ROOT = os.path.join(USER_HOME, 'Datasets/Sth-sth/Sth-sth-v2-TSM-sliced')  # Directory for extracted frames
 
 
 def split(l, n):
