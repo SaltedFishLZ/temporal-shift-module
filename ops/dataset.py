@@ -15,7 +15,7 @@ from skimage.measure import compare_ssim
 import imutils
 import cv2
 
-__ddebug__ = False
+__ddebug__ = True
 
 class VideoRecord(object):
     def __init__(self, row):
@@ -140,6 +140,9 @@ class TSNDataSet(data.Dataset):
         """
         seed(int(time.time()))
 
+        if (__ddebug__):
+            print("Entering _sample_indices")
+
         if self.dense_sample:  # i3d dense sample
             sample_pos = max(1, 1 + record.num_frames - 64)
             t_stride = 64 // self.num_segments
@@ -168,6 +171,9 @@ class TSNDataSet(data.Dataset):
 
     def _get_val_indices(self, record):
         seed(int(time.time()))
+
+        if (__ddebug__):
+            print("Entering _get_val_indices")
 
         if self.dense_sample:  # i3d dense sample
             sample_pos = max(1, 1 + record.num_frames - 64)
@@ -215,6 +221,9 @@ class TSNDataSet(data.Dataset):
         
         elif (self.ssim_sample):
             
+            if (__ddebug__):
+                print("Using SSIM sampling")
+
             def read_img(idx):
                 img_path = None
                 if self.modality == 'RGB' or self.modality == 'RGBDiff':
