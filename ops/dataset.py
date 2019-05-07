@@ -11,6 +11,9 @@ import time
 
 import numpy as np
 from numpy.random import randint, seed
+from skimage.measure import compare_ssim
+import imutils
+import cv2
 
 __ddebug__ = False
 
@@ -54,7 +57,8 @@ class TSNDataSet(data.Dataset):
                  image_tmpl='img_{:05d}.jpg', transform=None,
                  random_shift=True, test_mode=False,
                  remove_missing=False, dense_sample=False, 
-                 random_sample = False
+                 random_sample = False,
+                 ssim_sample = False
                  ):
 
         self.root_path = root_path
@@ -69,10 +73,13 @@ class TSNDataSet(data.Dataset):
         self.remove_missing = remove_missing
         self.dense_sample = dense_sample  # using dense sample as I3D
         self.random_sample = random_sample # using true random sample
+        self.ssim_sample = ssim_sample  # using SSIM sample
         if self.dense_sample:
             print('=> Using dense sample for the dataset...')
         if (self.random_sample):
             print('=> Using random sample for the dataset...')
+        if (self.ssim_sample):
+            print('=> Using SSIM sample for the dataset...')
 
         if self.modality == 'RGBDiff':
             self.new_length += 1  # Diff needs one more image to calculate diff
@@ -139,6 +146,7 @@ class TSNDataSet(data.Dataset):
             start_idx = 0 if sample_pos == 1 else np.random.randint(0, sample_pos - 1)
             offsets = [(idx * t_stride + start_idx) % record.num_frames for idx in range(self.num_segments)]
             return np.array(offsets) + 1
+        
         elif (self.random_sample):
             # img index starts from 1 !!!
             offsets = gen_rand_seq(self.num_segments, (1 , record.num_frames + 1))
@@ -146,6 +154,7 @@ class TSNDataSet(data.Dataset):
                 print("Record ", record)
                 print("Frames ", offsets)
             return(offsets)
+            
         else:  # normal sample
             average_duration = (record.num_frames - self.new_length + 1) // self.num_segments
             if average_duration > 0:
@@ -173,6 +182,9 @@ class TSNDataSet(data.Dataset):
                 print("Record ", record)
                 print("Frames ", offsets)
             return(offsets)      
+
+
+
         else:
             if record.num_frames > self.num_segments + self.new_length - 1:
                 tick = (record.num_frames - self.new_length + 1) / float(self.num_segments)
@@ -199,6 +211,46 @@ class TSNDataSet(data.Dataset):
                 print("Record ", record)
                 print("Frames ", offsets)
             return(offsets)
+
+        
+        elif (self.ssim_sample):
+            
+            def read_img(idx):
+                img_path = None
+                if self.modality == 'RGB' or self.modality == 'RGBDiff':
+                    img_path = os.path.join(self.root_path, record.path, self.image_tmpl.format(idx))
+                else:
+                    assert "Not Implemented"
+                img = cv2.imread(img_path)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                return (img)
+            
+            # 
+            def calc_ssim(idx_0, idx_1):
+                img_0 = read_img(idx_0)
+                img_1 = read_img(idx_1)
+                (score, diff) = compare_ssim(img_0, img_1, full=True)
+                return(score)
+
+            N = record.num_frames
+            # convert frame indices from [1, N] to [0, N-1]
+            # uni_ssim[i] = SSIM(frame[i], frame[i+1])
+            uni_ssim = np.empty((N - 1,))
+            for _i in range(0, N - 1):
+                uni_ssim[_i] = calc_ssim(_i + 1, _i + 2)
+            
+            bi_ssim = np.empty((N,))
+            bi_ssim[0] = uni_ssim[0]
+            bi_ssim[N-1] = uni_ssim[N-2]
+            for _i in range(1, N - 1):
+                bi_ssim[_i] = (uni_ssim[_i - 1] + uni_ssim[_i]) / 2
+            
+            # get least similiar ones and shift indices back
+            offsets = np.argsort(bi_ssim)
+            offsets = np.array(offsets[0:self.num_segments]) + 1
+            return(offsets)
+
+
         else:
             tick = (record.num_frames - self.new_length + 1) / float(self.num_segments)
             offsets = np.array([int(tick / 2.0 + tick * x) for x in range(self.num_segments)])
