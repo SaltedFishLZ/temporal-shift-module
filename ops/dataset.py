@@ -154,7 +154,7 @@ class TSNDataSet(data.Dataset):
                 print("Record ", record)
                 print("Frames ", offsets)
             return(offsets)
-            
+
         else:  # normal sample
             average_duration = (record.num_frames - self.new_length + 1) // self.num_segments
             if average_duration > 0:
@@ -248,6 +248,12 @@ class TSNDataSet(data.Dataset):
             # get least similiar ones and shift indices back
             offsets = np.argsort(bi_ssim)
             offsets = np.array(offsets[0:self.num_segments]) + 1
+
+            if (__ddebug__):
+                debug_str = "[" + str(record) + "]"
+                debug_str += "Selected frames: " + str(offsets)
+                print(debug_str)
+
             return(offsets)
 
 
