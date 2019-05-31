@@ -1,3 +1,6 @@
+# venv
+venv*/
+
 # trained model
 checkpoint/
 *.pth

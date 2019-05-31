@@ -4,3 +4,5 @@ tensorboard == 1.12.0
 tensorboardx
 tqdm
 sklearn
+opencv-python
+psutil
