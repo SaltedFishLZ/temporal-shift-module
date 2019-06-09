@@ -33,6 +33,10 @@ class VideoRecord(object):
         string += "\nLabel: " + self.label
         return string
 
+    def __lt__(self, other):
+        assert isinstance(other, VideoRecord), TypeError
+        return self.path < other.path
+
 class TSNDataSet(data.Dataset):
     def __init__(self, root_path, list_file,
                  num_segments=3, new_length=1, modality='RGB',
@@ -58,6 +62,7 @@ class TSNDataSet(data.Dataset):
             self.new_length += 1  # Diff needs one more image to calculate diff
 
         self._parse_list()
+        self.video_list.sort()
 
     def _load_image(self, directory, idx):
         if self.modality == 'RGB' or self.modality == 'RGBDiff':
@@ -103,6 +108,7 @@ class TSNDataSet(data.Dataset):
         if self.image_tmpl == '{:06d}-{}_{:05d}.jpg':
             for v in self.video_list:
                 v._data[1] = int(v._data[1]) / 2
+
         print('video number:%d' % (len(self.video_list)))
 
     def _sample_indices(self, record):

@@ -50,12 +50,10 @@ def main():
         args.store_name += '_{}'.format(args.suffix)
     print('storing name: ' + args.store_name)
 
-    check_rootfolders()
-
 
     # Data loading code
     if args.modality != 'RGBDiff':
-        normalize = GroupNormalize(input_mean, input_std)
+        normalize = GroupNormalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     else:
         normalize = IdentityTransform()
 
@@ -78,7 +76,6 @@ def main():
                         ToTorchFormatTensor(div=(args.arch not in ['BNInception', 'InceptionV3'])),
                         normalize,
                    ]),
-                   dense_sample=args.dense_sample
                    )
 
     print(val_dataset.video_list)
