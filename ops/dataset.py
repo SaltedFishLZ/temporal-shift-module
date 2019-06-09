@@ -27,6 +27,11 @@ class VideoRecord(object):
     def label(self):
         return int(self._data[2])
 
+    def __repr__(self):
+        string = "\n"
+        string += "\nPath: " + self.path
+        string += "\nLabel: " + self.label
+        return string
 
 class TSNDataSet(data.Dataset):
     def __init__(self, root_path, list_file,
